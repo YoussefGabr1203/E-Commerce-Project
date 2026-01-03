@@ -71,7 +71,7 @@ export const products = [
     description: 'High-capacity portable charger with fast charging technology.',
     price: 39.99,
     originalPrice: 49.99,
-    image: 'https://images.unsplash.com/photo-1609091839311-d5363f40fb98?w=500',
+    image: 'https://images.unsplash.com/photo-1619489646924-b4fce76b1db5?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
     category: 'Accessories',
     rating: 4.5,
     inStock: true,
