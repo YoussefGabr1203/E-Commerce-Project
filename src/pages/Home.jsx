@@ -1,11 +1,28 @@
-import React from 'react';
-import { Container, Row, Col, Button } from 'react-bootstrap';
+import React, { useState, useEffect } from 'react';
+import { Container, Row, Col, Button, Spinner } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
-import { products } from '../data/products';
+import { fetchProducts, transformProduct } from '../services/api';
 
 const Home = () => {
-  const featuredProducts = products.slice(0, 6);
+  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadFeaturedProducts = async () => {
+      try {
+        const data = await fetchProducts(6); // Fetch first 6 products
+        const transformed = data.products.map(transformProduct);
+        setFeaturedProducts(transformed);
+      } catch (error) {
+        console.error('Error loading featured products:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadFeaturedProducts();
+  }, []);
 
   return (
     <>
@@ -59,11 +76,24 @@ const Home = () => {
           </Col>
         </Row>
         <Row>
-          {featuredProducts.map((product) => (
-            <Col key={product.id} xs={12} sm={6} md={4} lg={4} className="mb-4">
-              <ProductCard product={product} />
+          {loading ? (
+            <Col className="text-center my-5">
+              <Spinner animation="border" variant="primary" style={{ 
+                width: '3rem', 
+                height: '3rem',
+                borderWidth: '4px',
+                borderColor: '#00f5ff',
+                borderRightColor: 'transparent'
+              }} />
+              <p className="mt-3" style={{ color: '#a5b4fc' }}>Loading featured products...</p>
             </Col>
-          ))}
+          ) : (
+            featuredProducts.map((product) => (
+              <Col key={product.id} xs={12} sm={6} md={4} lg={4} className="mb-4">
+                <ProductCard product={product} />
+              </Col>
+            ))
+          )}
         </Row>
         <Row className="mt-5">
           <Col className="text-center">

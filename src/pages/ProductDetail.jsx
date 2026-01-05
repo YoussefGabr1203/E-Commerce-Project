@@ -1,23 +1,65 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Container, Row, Col, Button, Badge, Alert } from 'react-bootstrap';
-import { getProductById } from '../data/products';
+import { Container, Row, Col, Button, Badge, Alert, Spinner } from 'react-bootstrap';
+import { fetchProductById, transformProduct } from '../services/api';
 import { useCart } from '../context/CartContext';
 
 const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const product = getProductById(id);
   const { addToCart } = useCart();
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [showAlert, setShowAlert] = useState(false);
 
-  if (!product) {
+  useEffect(() => {
+    const loadProduct = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await fetchProductById(id);
+        const transformed = transformProduct(data);
+        setProduct(transformed);
+      } catch (err) {
+        console.error('Error loading product:', err);
+        setError('Failed to load product. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      loadProduct();
+    }
+  }, [id]);
+
+  if (loading) {
+    return (
+      <Container className="my-5">
+        <Row>
+          <Col className="text-center my-5">
+            <Spinner animation="border" variant="primary" style={{ 
+              width: '3rem', 
+              height: '3rem',
+              borderWidth: '4px',
+              borderColor: '#00f5ff',
+              borderRightColor: 'transparent'
+            }} />
+            <p className="mt-3" style={{ color: '#a5b4fc' }}>Loading product...</p>
+          </Col>
+        </Row>
+      </Container>
+    );
+  }
+
+  if (error || !product) {
     return (
       <Container className="my-5">
         <Alert variant="danger">
           <Alert.Heading>Product Not Found</Alert.Heading>
-          <p>The product you're looking for doesn't exist.</p>
+          <p>{error || "The product you're looking for doesn't exist."}</p>
           <Button variant="primary" onClick={() => navigate('/products')}>
             Back to Products
           </Button>
