@@ -48,41 +48,15 @@ const Products = () => {
 
   // Handle category filter (only when not searching)
   useEffect(() => {
-    const filterProducts = async () => {
-      // If searching, don't filter by category here (handled in search effect)
-      if (searchTerm.trim()) {
-        return;
-      }
-
-      if (!selectedCategory || selectedCategory === 'All') {
-        setFilteredProducts(products);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        const categoryData = await fetchProductsByCategory(selectedCategory);
-        const transformedProducts = categoryData.products.map(transformProduct);
-        setFilteredProducts(transformedProducts);
-      } catch (err) {
-        console.error('Error filtering by category:', err);
-        setError('Failed to filter products. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (products.length > 0) {
-      filterProducts();
+    // Don't run if we're searching (search effect handles it)
+    if (searchTerm.trim()) {
+      return;
     }
-  }, [selectedCategory, products, searchTerm]);
 
-  // Handle search
-  useEffect(() => {
-    const performSearch = async () => {
-      if (!searchTerm.trim()) {
-        // If no search term, show all products or filtered by category
-        if (!selectedCategory || selectedCategory === 'All') {
+    const filterProducts = async () => {
+      if (!selectedCategory || selectedCategory === 'All') {
+        // Show all products
+        if (products.length > 0) {
           setFilteredProducts(products);
         }
         return;
@@ -90,19 +64,96 @@ const Products = () => {
 
       try {
         setLoading(true);
+        setError(null);
+        const categoryData = await fetchProductsByCategory(selectedCategory);
+        
+        if (categoryData && categoryData.products && categoryData.products.length > 0) {
+          const transformedProducts = categoryData.products.map(transformProduct);
+          setFilteredProducts(transformedProducts);
+        } else {
+          // If API returns empty, try filtering local products as fallback
+          const normalizedCategory = selectedCategory.toLowerCase().trim();
+          const localFiltered = products.filter(p => {
+            if (!p.category) return false;
+            const productCategory = p.category.toLowerCase().trim();
+            return productCategory === normalizedCategory || 
+                   productCategory.replace(/\s+/g, '-') === normalizedCategory.replace(/\s+/g, '-');
+          });
+          setFilteredProducts(localFiltered);
+          if (localFiltered.length === 0) {
+            setError(null); // Don't show error, just show empty state
+          }
+        }
+      } catch (err) {
+        console.error('Error filtering by category:', err);
+        // Fallback to local filtering if API fails
+        const normalizedCategory = selectedCategory.toLowerCase().trim();
+        const localFiltered = products.filter(p => {
+          if (!p.category) return false;
+          const productCategory = p.category.toLowerCase().trim();
+          return productCategory === normalizedCategory || 
+                 productCategory.replace(/\s+/g, '-') === normalizedCategory.replace(/\s+/g, '-');
+        });
+        setFilteredProducts(localFiltered);
+        // Don't set error for empty results, just show empty state
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Only filter if we have products loaded
+    if (products.length > 0) {
+      filterProducts();
+    }
+  }, [selectedCategory, searchTerm]);
+
+  // Handle search
+  useEffect(() => {
+    const performSearch = async () => {
+      if (!searchTerm.trim()) {
+        // If no search term, let category filter handle it
+        // Reset to show all or category-filtered products
+        if (!selectedCategory || selectedCategory === 'All') {
+          setFilteredProducts(products);
+        } else {
+          // Trigger category filter by not doing anything here
+          // The category effect will handle it
+        }
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
         const searchData = await searchProducts(searchTerm);
         const transformedProducts = searchData.products.map(transformProduct);
         
         // Also filter by category if one is selected
         let filtered = transformedProducts;
         if (selectedCategory && selectedCategory !== 'All') {
-          filtered = transformedProducts.filter(p => p.category === selectedCategory);
+          const normalizedCategory = selectedCategory.toLowerCase().trim();
+          filtered = transformedProducts.filter(p => 
+            p.category && p.category.toLowerCase() === normalizedCategory
+          );
         }
         
         setFilteredProducts(filtered);
       } catch (err) {
         console.error('Error searching products:', err);
         setError('Failed to search products. Please try again.');
+        // Fallback to local search
+        const searchLower = searchTerm.toLowerCase();
+        let localFiltered = products.filter(p => 
+          p.name.toLowerCase().includes(searchLower) ||
+          p.description.toLowerCase().includes(searchLower)
+        );
+        if (selectedCategory && selectedCategory !== 'All') {
+          const normalizedCategory = selectedCategory.toLowerCase().trim();
+          localFiltered = localFiltered.filter(p => 
+            p.category && p.category.toLowerCase() === normalizedCategory
+          );
+        }
+        setFilteredProducts(localFiltered);
       } finally {
         setLoading(false);
       }
@@ -114,7 +165,7 @@ const Products = () => {
     }, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [searchTerm, selectedCategory]);
+  }, [searchTerm, selectedCategory, products]);
 
   if (error) {
     return (

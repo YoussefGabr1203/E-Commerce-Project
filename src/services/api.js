@@ -42,12 +42,20 @@ export const fetchProductById = async (id) => {
 
 /**
  * Fetch products by category
- * @param {string} category - Product category
+ * @param {string} category - Product category (name or slug)
  * @returns {Promise} Products data
  */
 export const fetchProductsByCategory = async (category) => {
   try {
-    const response = await fetch(`${BASE_URL}/products/category/${category}`);
+    // DummyJSON API uses slug format (lowercase, hyphenated)
+    // Convert category name to slug format if needed
+    const categorySlug = category
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/[^a-z0-9-]/g, ''); // Remove special characters
+    
+    const response = await fetch(`${BASE_URL}/products/category/${categorySlug}`);
     if (!response.ok) {
       throw new Error('Failed to fetch products by category');
     }
